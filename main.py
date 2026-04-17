@@ -1,0 +1,75 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.configs.config import get_config
+from src.logging.custom_logger import Logging
+from src.routes import api_router
+
+LOGGER = Logging().get_logger("main")
+
+
+def _parse_origins(raw: str) -> list[str]:
+    if not raw or raw.strip() == "*":
+        return ["*"]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+def create_app() -> FastAPI:
+    config = get_config()
+
+    app = FastAPI(
+        title=f"{config.project.name} API",
+        description=(
+            "ADK-powered GTM analyzer agents for VentureSea. "
+            "Two endpoints: /analyze/document (pitch deck) and /analyze/url "
+            "(website with Google Search grounding)."
+        ),
+        version=config.project.version,
+        docs_url="/docs",
+        redoc_url="/redoc",
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_parse_origins(config.secrets.CORS_ORIGINS),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(api_router)
+
+    @app.on_event("startup")
+    async def startup():
+        LOGGER.info(
+            f"Starting {config.project.name} v{config.project.version} "
+            f"(model={config.gemini.model_name})"
+        )
+        if not config.secrets.GOOGLE_API_KEY:
+            LOGGER.warning("GOOGLE_API_KEY is not set")
+        if not config.secrets.SERVICE_API_KEY:
+            LOGGER.warning(
+                "SERVICE_API_KEY is not set — /analyze endpoints will reject all requests"
+            )
+        if not config.secrets.GCS_BUCKET_NAME:
+            LOGGER.warning("GCS_BUCKET_NAME is not set — /upload will fail")
+
+    @app.get("/")
+    async def root():
+        return {
+            "service": config.project.name,
+            "version": config.project.version,
+            "status": "operational",
+        }
+
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    config = get_config()
+    uvicorn.run("main:app", host=config.api.host, port=config.api.port, reload=True)

@@ -1,0 +1,155 @@
+import os
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_config_singleton():
+    import src.configs.config as cfg_module
+    import src.services.gcs.client as gcs_module
+
+    cfg_module._config = None
+    gcs_module._client = None
+    yield
+    cfg_module._config = None
+    gcs_module._client = None
+
+
+@pytest.fixture
+def set_env(monkeypatch):
+    def _apply(**kwargs):
+        for k, v in kwargs.items():
+            monkeypatch.setenv(k, v)
+
+    return _apply
+
+
+@pytest.fixture
+def valid_brief() -> dict:
+    return {
+        "companyName": "Acme",
+        "product": "Widget",
+        "gtmScore": 72,
+        "verdict": "Go",
+        "verdictReason": "Strong fit",
+        "summary": "Go for it",
+        "scoreBreakdown": [
+            {"dimension": "Market Opportunity", "score": 20, "max": 25, "note": "ok"},
+            {
+                "dimension": "Competitive Landscape",
+                "score": 15,
+                "max": 20,
+                "note": "ok",
+            },
+            {
+                "dimension": "Regulatory Feasibility",
+                "score": 14,
+                "max": 20,
+                "note": "ok",
+            },
+            {"dimension": "Product-Market Fit", "score": 15, "max": 20, "note": "ok"},
+            {
+                "dimension": "GTM Execution Feasibility",
+                "score": 10,
+                "max": 15,
+                "note": "ok",
+            },
+            {"dimension": "Macro & Timing", "score": 8, "max": 10, "note": "ok"},
+        ],
+        "marketOpportunity": {
+            "headline": "Big market",
+            "narrative": "Growing fast",
+            "keyStats": [
+                {"label": "TAM", "value": "$10B"},
+                {"label": "Users", "value": "100M"},
+                {"label": "Growth", "value": "20%"},
+            ],
+        },
+        "marketSizing": {
+            "tam": {
+                "label": "Total Addressable Market",
+                "value": "$10B",
+                "pct": 85,
+                "note": "ok",
+            },
+            "sam": {
+                "label": "Serviceable Addressable Market",
+                "value": "$3B",
+                "pct": 55,
+                "note": "ok",
+            },
+            "som": {
+                "label": "Serviceable Obtainable Market",
+                "value": "$500M",
+                "pct": 22,
+                "note": "ok",
+            },
+            "cagr": "20%",
+            "growth": "fast",
+        },
+        "marketAnalysis": {
+            "overview": "good",
+            "trends": ["a", "b", "c", "d"],
+            "risks": ["x", "y", "z"],
+        },
+        "opportunities": [
+            {"title": "A", "desc": "a"},
+            {"title": "B", "desc": "b"},
+            {"title": "C", "desc": "c"},
+        ],
+        "competitors": [
+            {
+                "rank": 1,
+                "name": "A",
+                "hq": "SG",
+                "desc": "a",
+                "threat": "High",
+                "weakness": "x",
+            },
+            {
+                "rank": 2,
+                "name": "B",
+                "hq": "ID",
+                "desc": "b",
+                "threat": "Medium",
+                "weakness": "y",
+            },
+            {
+                "rank": 3,
+                "name": "C",
+                "hq": "MY",
+                "desc": "c",
+                "threat": "Low",
+                "weakness": "z",
+            },
+        ],
+        "regulatory": [
+            {"level": "critical", "agency": "MAS", "title": "T1", "desc": "d"},
+            {"level": "critical", "agency": "OJK", "title": "T2", "desc": "d"},
+            {"level": "medium", "agency": "X", "title": "T3", "desc": "d"},
+            {"level": "medium", "agency": "Y", "title": "T4", "desc": "d"},
+            {"level": "low", "agency": "Z", "title": "T5", "desc": "d"},
+        ],
+        "gtmPlan": {
+            "phase1": {
+                "timing": "Month 1-3",
+                "title": "P1",
+                "items": ["a", "b", "c", "d"],
+            },
+            "phase2": {
+                "timing": "Month 4-9",
+                "title": "P2",
+                "items": ["a", "b", "c", "d"],
+            },
+            "phase3": {
+                "timing": "Month 10-18",
+                "title": "P3",
+                "items": ["a", "b", "c", "d"],
+            },
+        },
+    }
+
+
+os.environ.setdefault("SERVICE_API_KEY", "test-key")
+os.environ.setdefault("GOOGLE_API_KEY", "test-google-key")
+os.environ.setdefault("GCS_BUCKET_NAME", "test-bucket")

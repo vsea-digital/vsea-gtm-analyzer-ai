@@ -1,0 +1,20 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    tags: ['v*']
+
+jobs:
+  ci:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+      - run: uv sync --frozen --dev
+      - run: uvx pre-commit run --all-files
+      - run: uv run pytest tests/ -v --tb=short

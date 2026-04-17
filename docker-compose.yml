@@ -1,0 +1,13 @@
+services:
+  gtm-analyzer-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/gcp-sa.json
+    volumes:
+      - ./secrets/gcp-sa.json:/secrets/gcp-sa.json:ro
