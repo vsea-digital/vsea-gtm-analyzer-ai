@@ -68,6 +68,9 @@ class Secrets:
         default_factory=lambda: os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
     )
     CORS_ORIGINS: str = field(default_factory=lambda: os.getenv("CORS_ORIGINS", "*"))
+    CORS_ORIGIN_REGEX: str = field(
+        default_factory=lambda: os.getenv("CORS_ORIGIN_REGEX", "")
+    )
 
 
 @dataclass

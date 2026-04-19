@@ -29,13 +29,24 @@ def create_app() -> FastAPI:
         redoc_url="/redoc",
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=_parse_origins(config.secrets.CORS_ORIGINS),
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    origins = _parse_origins(config.secrets.CORS_ORIGINS)
+    origin_regex = config.secrets.CORS_ORIGIN_REGEX or None
+    cors_kwargs: dict = {
+        "allow_credentials": True,
+        "allow_methods": ["*"],
+        "allow_headers": ["*"],
+    }
+    # Starlette forbids "*" origins together with allow_credentials=True.
+    # When the app is wide-open, drop credentials so preflight still works.
+    if origins == ["*"] and not origin_regex:
+        cors_kwargs["allow_origins"] = ["*"]
+        cors_kwargs["allow_credentials"] = False
+    else:
+        cors_kwargs["allow_origins"] = [] if origins == ["*"] else origins
+        if origin_regex:
+            cors_kwargs["allow_origin_regex"] = origin_regex
+
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 
     app.include_router(api_router)
 

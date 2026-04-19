@@ -89,6 +89,83 @@ docker compose up
 
 The SA file at `./secrets/gcp-sa.json` is mounted read-only into the container at `/secrets/gcp-sa.json` and `GOOGLE_APPLICATION_CREDENTIALS` is set accordingly.
 
+## Production deploy (vsea-hostinger-1)
+
+### One-time VM bootstrap
+
+SSH into `vsea-hostinger-1`, then:
+
+```bash
+# 1. Clone
+cd ~
+git clone https://github.com/vsea-digital/vsea-gtm-analyzer-ai.git
+cd vsea-gtm-analyzer-ai
+
+# 2. Populate env/ and secrets/
+mkdir -p env secrets
+cp env/gtm-analyzer.env.example env/gtm-analyzer.env
+$EDITOR env/gtm-analyzer.env                          # fill in GOOGLE_API_KEY, SERVICE_API_KEY, GCS_BUCKET_NAME
+
+# 3. Drop the SA JSON in — reuse from ~/vsea-ats if already present
+cp ~/vsea-ats/secrets/vsea-ats-sa-key.json secrets/gcp-sa.json
+# (or scp from your machine; the file is not in git)
+
+# 4. Open the firewall on the chosen port
+sudo ufw allow 8003/tcp comment 'vsea-gtm-analyzer-ai'
+
+# 5. First boot
+sg docker -c 'docker compose -f docker-compose.prod.yml up -d --build'
+
+# 6. Verify
+curl -s http://127.0.0.1:8003/api/v1/health
+```
+
+The service now listens on `<VM-IP>:8003`. Confirm from your laptop:
+
+```bash
+curl http://<VM-IP>:8003/api/v1/health
+```
+
+### Ongoing deploys
+
+GitHub Actions does the rest. Tag a release locally and push:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+CI/CD job `deploy` SSHes to the VM, checks out the tag, rebuilds, recreates the container, and smoke-tests `/health`. Required GitHub secrets (same values as the ATS deploy uses): `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_PORT`.
+
+### TLS / load balancer
+
+**Current setup — raw IP + HTTP.** Sufficient for internal testing and for calling from the HTML served over `http://` or opened as `file://`. **Not sufficient for prod**: browsers block HTTP calls from an `https://www.venturesea.co` page (mixed content).
+
+**Upgrade path when we're ready to call this from the production HTML:**
+
+1. Point a subdomain at the VM — e.g. add A record `gtm-api.venturesea.co → <VM-IP>`.
+2. Add a proxy host in the existing nginx-proxy-manager (NPM) on the VM:
+   - Domain: `gtm-api.venturesea.co`
+   - Forward to: `127.0.0.1` : `8003` (same VM, so host network)
+   - Enable "Request Let's Encrypt Cert" + "Force SSL" + "HTTP/2"
+3. Flip the compose port binding from `0.0.0.0:8003:8003` → `127.0.0.1:8003:8003` (only NPM needs to reach it).
+4. Update `CORS_ORIGINS` on the VM env file if the frontend origin changes.
+5. Update the frontend `CONFIG.API_BASE` to `https://gtm-api.venturesea.co/api/v1`.
+
+No new load balancer needed — NPM gives us SSL, HTTP/2, and sane default headers; a single VM doesn't need a separate LB. Add one (Cloudflare, or a second VM behind a managed LB) only if/when you hit a scaling ceiling. Gemini latency (~10–20s per call) dominates response time, so a single 4-vCPU container will handle small user counts fine — RAM ceiling is the thing to watch.
+
+## CORS
+
+Two env vars drive the allow-list:
+
+| Var | Purpose | Example |
+|---|---|---|
+| `CORS_ORIGINS` | Exact-match allow-list, comma-separated | `https://www.venturesea.co,https://venturesea.co` |
+| `CORS_ORIGIN_REGEX` | Regex for dynamic dev origins | `^(https?://(localhost\|127\.0\.0\.1)(:\d+)?\|null)$` |
+
+The regex shown above covers: `http://localhost:<any>`, `http://127.0.0.1:<any>`, and `null` (what the browser sends when you open the HTML file directly from disk). Keep both set in prod — the regex never matches a non-dev origin.
+
+If `CORS_ORIGINS=*` and no regex is set, the middleware opens up entirely and disables credentials (Starlette rule). Leave `*` for throwaway dev only.
+
 ## Frontend integration — retain the existing HTML flow
 
 Goal: keep `venturesea-gtm-analyzer-v7.html`'s UX (upload tab, URL tab, market/industry dropdowns, loading steps, `renderReport`) exactly as-is. Only the two functions that talk to Gemini change — `callGeminiWithURL` and `callGeminiWithFile`. Their signatures and return value (the parsed `GTMBrief` object) stay the same, so `startAnalysis()` (HTML line ~754) keeps working untouched.

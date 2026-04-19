@@ -18,3 +18,39 @@ jobs:
       - run: uv sync --frozen --dev
       - run: uvx pre-commit run --all-files
       - run: uv run pytest tests/ -v --tb=short
+
+  deploy:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-gtm-analyzer
+      cancel-in-progress: false
+    env:
+      TAG_NAME: ${{ github.ref_name }}
+    steps:
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          command_timeout: 10m
+          envs: TAG_NAME
+          script: |
+            set -euo pipefail
+            cd ~/vsea-gtm-analyzer-ai
+            git fetch --tags --force
+            git checkout "$TAG_NAME"
+            sg docker -c 'docker compose -f docker-compose.prod.yml build gtm-analyzer-ai'
+            sg docker -c 'docker compose -f docker-compose.prod.yml up -d --force-recreate gtm-analyzer-ai'
+            # Wait for the container to come up and smoke-test /health.
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -sf http://127.0.0.1:8003/api/v1/health >/dev/null; then
+                echo "Health check passed on attempt $i"
+                exit 0
+              fi
+              sleep 3
+            done
+            echo "Health check failed after 30s" >&2
+            sg docker -c 'docker logs --tail 50 vsea-gtm-analyzer-ai' >&2 || true
+            exit 1

@@ -10,3 +10,5 @@ htmlcov/
 .ruff_cache/
 secrets/*.json
 !secrets/.gitkeep
+env/*.env
+!env/*.example

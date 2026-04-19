@@ -1,0 +1,31 @@
+services:
+  gtm-analyzer-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vsea-gtm-analyzer-ai:latest
+    container_name: vsea-gtm-analyzer-ai
+    # Bind to all interfaces so the service is reachable from the VM's public IP.
+    # Swap to 127.0.0.1:8003:8003 once we put nginx / an HTTPS proxy in front.
+    ports:
+      - "0.0.0.0:8003:8003"
+    env_file:
+      - ./env/gtm-analyzer.env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/gcp-sa.json
+    volumes:
+      - ./secrets/gcp-sa.json:/secrets/gcp-sa.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8003/api/v1/health', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vsea-gtm-network
+
+networks:
+  vsea-gtm-network:
+    name: vsea-gtm-network
+    driver: bridge
