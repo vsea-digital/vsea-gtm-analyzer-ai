@@ -8,70 +8,76 @@ Threat = Literal["High", "Medium", "Low"]
 RegLevel = Literal["critical", "medium", "low"]
 
 
+# Fields that are "flavor text" (notes, descriptions, weaknesses) default to ""
+# because gemini-3-flash-preview occasionally omits them even when the prompt
+# demands the full structure. Structural fields (scores, enums, list sizes)
+# stay required — if those come back wrong, we want a 502, not silent garbage.
+
+
 class ScoreBreakdownItem(BaseModel):
     dimension: str
     score: int
     max: int
-    note: str
+    note: str = ""
 
 
 class KeyStat(BaseModel):
-    label: str
-    value: str
+    label: str = ""
+    value: str = ""
 
 
 class MarketOpportunity(BaseModel):
-    headline: str
-    narrative: str
-    keyStats: list[KeyStat]
+    headline: str = ""
+    narrative: str = ""
+    keyStats: list[KeyStat] = Field(default_factory=list)
 
 
 class MarketSizingBand(BaseModel):
-    label: str
-    value: str
-    pct: int
-    note: str
+    label: str = ""
+    value: str = ""
+    pct: int = 0
+    note: str = ""
 
 
 class MarketSizing(BaseModel):
     tam: MarketSizingBand
     sam: MarketSizingBand
     som: MarketSizingBand
-    cagr: str
-    growth: str
+    cagr: str = ""
+    growth: str = ""
 
 
 class MarketAnalysis(BaseModel):
-    overview: str
-    trends: list[str]
-    risks: list[str]
+    overview: str = ""
+    trends: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
 
 
 class Opportunity(BaseModel):
-    title: str
-    desc: str
+    title: str = ""
+    desc: str = ""
 
 
 class Competitor(BaseModel):
     rank: int
     name: str
-    hq: str
-    desc: str
+    hq: str = ""
+    desc: str = ""
     threat: Threat
-    weakness: str
+    weakness: str = ""
 
 
 class RegulatoryItem(BaseModel):
     level: RegLevel
-    agency: str
-    title: str
-    desc: str
+    agency: str = ""
+    title: str = ""
+    desc: str = ""
 
 
 class GtmPhase(BaseModel):
-    timing: str
-    title: str
-    items: list[str]
+    timing: str = ""
+    title: str = ""
+    items: list[str] = Field(default_factory=list)
 
 
 class GtmPlan(BaseModel):
@@ -85,8 +91,8 @@ class GTMBrief(BaseModel):
     product: str
     gtmScore: int = Field(ge=0, le=100)
     verdict: Verdict
-    verdictReason: str
-    summary: str
+    verdictReason: str = ""
+    summary: str = ""
     scoreBreakdown: list[ScoreBreakdownItem]
     marketOpportunity: MarketOpportunity
     marketSizing: MarketSizing

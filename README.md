@@ -11,16 +11,220 @@ ADK-powered GTM analyzer backend for VentureSea. Replaces the Gemini-via-Cloudfl
 
 Both return the same `GTMBrief` JSON schema (identical shape to the one the existing HTML renderer expects).
 
-## Endpoints
+## API reference
 
-```
-POST /api/v1/upload              multipart file → GCS → { request_id, gcs_uri, ... }
-POST /api/v1/analyze/document    { gcs_uri, market, industry } → GTMBrief
-POST /api/v1/analyze/url         { url, market, industry }     → GTMBrief
-GET  /api/v1/health              liveness
+Base URL (prod): `https://gtm-api.venturesea.tech/api/v1`
+
+All endpoints except `/health` require header `X-API-Key: <SERVICE_API_KEY>`. Interactive docs are served at `/docs` (Swagger) and `/redoc`.
+
+---
+
+### `GET /health`
+
+Liveness probe. No auth.
+
+```bash
+curl https://gtm-api.venturesea.tech/api/v1/health
 ```
 
-All `/api/v1/*` endpoints require `X-API-Key: $SERVICE_API_KEY`.
+**200 →**
+```json
+{
+  "status": "ok",
+  "service": "vsea-gtm-analyzer-ai",
+  "version": "0.1.0",
+  "model": "gemini-3-flash-preview"
+}
+```
+
+---
+
+### `POST /upload`
+
+Stage a pitch deck in GCS. Returns a `gcs_uri` to pass to `/analyze/document`.
+
+- **Auth**: `X-API-Key` required
+- **Content-Type**: `multipart/form-data`
+- **Body field**: `file` — the PDF or PPTX binary
+- **Limits**: 50 MB; `.pdf` and `.pptx` only (legacy `.ppt` rejected — re-save as `.pptx`)
+
+```bash
+curl -X POST https://gtm-api.venturesea.tech/api/v1/upload \
+  -H "X-API-Key: $KEY" \
+  -F file=@pitch.pdf
+```
+
+**200 →**
+```json
+{
+  "request_id": "c1f4a9...",
+  "gcs_uri": "gs://vsea-gtm-uploads/gtm-uploads/c1f4a9.../pitch.pdf",
+  "filename": "pitch.pdf",
+  "mime_type": "application/pdf",
+  "size_bytes": 4521933
+}
+```
+
+**Error codes:** `400` empty file · `401` bad/missing key · `413` over 50 MB · `415` unsupported extension · `502` GCS error.
+
+---
+
+### `POST /analyze/document`
+
+Analyze a previously-uploaded deck. Runs the document agent, returns the `GTMBrief`, then best-effort deletes the GCS object.
+
+- **Auth**: `X-API-Key` required
+- **Content-Type**: `application/json`
+
+**Request body**
+| Field | Type | Notes |
+|---|---|---|
+| `gcs_uri` | string | From `/upload` |
+| `market` | string | e.g. `"Singapore"`, `"Indonesia"` |
+| `industry` | string | free-form, e.g. `"Fintech"` |
+
+```bash
+curl -X POST https://gtm-api.venturesea.tech/api/v1/analyze/document \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"gcs_uri":"gs://...","market":"Singapore","industry":"Fintech"}'
+```
+
+**200 →** `GTMBrief` (see schema below). Typical latency: 15–25s.
+
+**Error codes:** `400` malformed URI · `401` bad key · `415` unsupported blob · `422` schema validation failed · `502` GCS or Gemini failure.
+
+---
+
+### `POST /analyze/url`
+
+Analyze a company from its website. Uses ADK's `google_search` tool for grounding — Gemini actively browses the site and SERP.
+
+- **Auth**: `X-API-Key` required
+- **Content-Type**: `application/json`
+
+**Request body**
+| Field | Type | Notes |
+|---|---|---|
+| `url` | string | must be a valid HTTP(S) URL |
+| `market` | string | |
+| `industry` | string | |
+
+```bash
+curl -X POST https://gtm-api.venturesea.tech/api/v1/analyze/url \
+  -H "X-API-Key: $KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://gojek.com","market":"Indonesia","industry":"Fintech"}'
+```
+
+**200 →** `GTMBrief`. Typical latency: 10–20s.
+
+**Error codes:** `401` bad key · `422` malformed URL · `502` Gemini/grounding failure.
+
+---
+
+### `GTMBrief` response schema
+
+Identical shape to what the current HTML renderer (`renderReport()`) consumes — drop-in compatible.
+
+```jsonc
+{
+  "companyName": "string",                              // always present
+  "product": "string",                                  // always present
+  "gtmScore": 0,                                        // 0-100
+  "verdict": "Go" | "Proceed with Caution" | "Hold",    // score-driven: >=60 Go, 30-59 Caution, <30 Hold
+  "verdictReason": "string",
+  "summary": "string",
+  "scoreBreakdown": [                                   // always 6 dimensions, in this order
+    { "dimension": "Market Opportunity",        "score": 0, "max": 25, "note": "" },
+    { "dimension": "Competitive Landscape",     "score": 0, "max": 20, "note": "" },
+    { "dimension": "Regulatory Feasibility",    "score": 0, "max": 20, "note": "" },
+    { "dimension": "Product-Market Fit",        "score": 0, "max": 20, "note": "" },
+    { "dimension": "GTM Execution Feasibility", "score": 0, "max": 15, "note": "" },
+    { "dimension": "Macro & Timing",            "score": 0, "max": 10, "note": "" }
+  ],
+  "marketOpportunity": {
+    "headline": "string",
+    "narrative": "string",
+    "keyStats": [ { "label": "string", "value": "string" } ]      // 3 items
+  },
+  "marketSizing": {
+    "tam":    { "label": "Total Addressable Market",      "value": "string", "pct": 85, "note": "" },
+    "sam":    { "label": "Serviceable Addressable Market","value": "string", "pct": 55, "note": "" },
+    "som":    { "label": "Serviceable Obtainable Market", "value": "string", "pct": 22, "note": "" },
+    "cagr":   "string",
+    "growth": "string"
+  },
+  "marketAnalysis": {
+    "overview": "string",
+    "trends": ["string"],    // 4 items
+    "risks":  ["string"]     // 3 items
+  },
+  "opportunities": [ { "title": "string", "desc": "string" } ],    // 3 items
+  "competitors": [
+    { "rank": 1, "name": "string", "hq": "string", "desc": "string",
+      "threat": "High" | "Medium" | "Low", "weakness": "string" }
+    // always 3 items
+  ],
+  "regulatory": [
+    { "level": "critical" | "medium" | "low",
+      "agency": "string", "title": "string", "desc": "string" }
+    // always 5 items
+  ],
+  "gtmPlan": {
+    "phase1": { "timing": "Month 1-3",   "title": "string", "items": ["string"] },   // 4 items each
+    "phase2": { "timing": "Month 4-9",   "title": "string", "items": ["string"] },
+    "phase3": { "timing": "Month 10-18", "title": "string", "items": ["string"] }
+  }
+}
+```
+
+String fields marked with empty-string defaults (e.g. `note`, `desc`, `weakness`) are guaranteed present but may be `""` if the model omitted them. Structural fields (scores, enums, list counts) are always populated — if Gemini returns malformed structural data, the endpoint 502s instead of returning garbage.
+
+---
+
+### CORS
+
+Preflight allow-list, env-driven (`CORS_ORIGINS` + `CORS_ORIGIN_REGEX`). Default prod config allows:
+
+- `https://www.venturesea.co` and `https://venturesea.co`
+- `http://localhost:*` and `http://127.0.0.1:*` (via regex, any port)
+- `null` origin (for HTML opened as `file://`)
+
+Any other origin gets `400 Bad Request` on preflight.
+
+---
+
+### Client example (the current `venturesea-gtm-analyzer-v7.html` flow)
+
+```js
+const API_BASE = "https://gtm-api.venturesea.tech/api/v1";
+const API_KEY = "<SERVICE_API_KEY>";   // stored in CONFIG, sent in X-API-Key
+
+// URL mode
+const brief = await fetch(`${API_BASE}/analyze/url`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+  body: JSON.stringify({ url, market, industry })
+}).then(r => r.json());
+
+// Document mode — two hops
+const fd = new FormData();
+fd.append("file", file);
+const { gcs_uri } = await fetch(`${API_BASE}/upload`, {
+  method: "POST",
+  headers: { "X-API-Key": API_KEY },   // no Content-Type; browser sets multipart boundary
+  body: fd
+}).then(r => r.json());
+
+const brief = await fetch(`${API_BASE}/analyze/document`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-API-Key": API_KEY },
+  body: JSON.stringify({ gcs_uri, market, industry })
+}).then(r => r.json());
+```
+
+See `renderReport(brief)` in the HTML — unchanged. The `GTMBrief` shape is identical to the legacy Cloudflare-proxy response.
 
 ## Local setup
 
