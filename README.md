@@ -110,20 +110,36 @@ $EDITOR env/gtm-analyzer.env                          # fill in GOOGLE_API_KEY, 
 cp ~/vsea-ats/secrets/vsea-ats-sa-key.json secrets/gcp-sa.json
 # (or scp from your machine; the file is not in git)
 
-# 4. Open the firewall on the chosen port
-sudo ufw allow 8003/tcp comment 'vsea-gtm-analyzer-ai'
-
-# 5. First boot
+# 4. First boot (service binds only to 127.0.0.1; NPM reaches it)
 sg docker -c 'docker compose -f docker-compose.prod.yml up -d --build'
 
-# 6. Verify
+# 5. Verify host-internal reachability
 curl -s http://127.0.0.1:8003/api/v1/health
 ```
 
-The service now listens on `<VM-IP>:8003`. Confirm from your laptop:
+The service listens on `127.0.0.1:8003` only. It is **not** reachable directly from the public internet — nginx-proxy-manager fronts it at `https://gtm-api.venturesea.tech`.
+
+### DNS + NPM one-time setup
+
+1. Add DNS A record `gtm-api.venturesea.tech → <VM public IP>` (wherever `venturesea.tech` is managed).
+2. In the existing nginx-proxy-manager UI → **Hosts → Proxy Hosts → Add Proxy Host**:
+   - **Domain Names**: `gtm-api.venturesea.tech`
+   - **Scheme**: `http`
+   - **Forward Hostname / IP**: `127.0.0.1`
+   - **Forward Port**: `8003`
+   - **Block Common Exploits**: ✓
+   - **Cache Assets** / **Websockets Support**: off (we don't need them)
+3. **SSL tab**:
+   - SSL Certificate: *Request a new SSL Certificate*
+   - Force SSL: ✓
+   - HTTP/2: ✓
+   - Email: your admin email
+   - Agree to Let's Encrypt TOS: ✓
+4. Save. NPM issues the cert via HTTP-01; takes ~30s.
+5. Verify from your laptop:
 
 ```bash
-curl http://<VM-IP>:8003/api/v1/health
+curl -s https://gtm-api.venturesea.tech/api/v1/health
 ```
 
 ### Ongoing deploys

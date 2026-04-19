@@ -5,10 +5,10 @@ services:
       dockerfile: Dockerfile
     image: vsea-gtm-analyzer-ai:latest
     container_name: vsea-gtm-analyzer-ai
-    # Bind to all interfaces so the service is reachable from the VM's public IP.
-    # Swap to 127.0.0.1:8003:8003 once we put nginx / an HTTPS proxy in front.
+    # Host-internal only. nginx-proxy-manager (on the VM host) forwards
+    # https://gtm-api.venturesea.tech → 127.0.0.1:8003.
     ports:
-      - "0.0.0.0:8003:8003"
+      - "127.0.0.1:8003:8003"
     env_file:
       - ./env/gtm-analyzer.env
     environment:
