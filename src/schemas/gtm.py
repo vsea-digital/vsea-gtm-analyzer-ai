@@ -3,15 +3,13 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
-Verdict = Literal["Go", "Proceed with Caution", "Hold"]
-Threat = Literal["High", "Medium", "Low"]
-RegLevel = Literal["critical", "medium", "low"]
+Verdict = Literal["Strong Go", "Conditional Go", "Proceed with Caution", "No Go"]
 
 
 # Fields that are "flavor text" (notes, descriptions, weaknesses) default to ""
-# because gemini-3-flash-preview occasionally omits them even when the prompt
-# demands the full structure. Structural fields (scores, enums, list sizes)
-# stay required — if those come back wrong, we want a 502, not silent garbage.
+# because the model occasionally omits them even when the prompt demands the
+# full structure. Structural fields (scores, list sizes) stay required — if
+# those come back wrong, we want a 502, not silent garbage.
 
 
 class ScoreBreakdownItem(BaseModel):
@@ -19,6 +17,7 @@ class ScoreBreakdownItem(BaseModel):
     score: int
     max: int
     note: str = ""
+    blocker: bool = False
 
 
 class KeyStat(BaseModel):
@@ -63,15 +62,16 @@ class Competitor(BaseModel):
     name: str
     hq: str = ""
     desc: str = ""
-    threat: Threat
+    threat: str = ""
     weakness: str = ""
 
 
 class RegulatoryItem(BaseModel):
-    level: RegLevel
+    level: str = ""
     agency: str = ""
     title: str = ""
     desc: str = ""
+    blocker: bool = False
 
 
 class GtmPhase(BaseModel):
@@ -90,6 +90,8 @@ class GTMBrief(BaseModel):
     companyName: str
     product: str
     gtmScore: int = Field(ge=0, le=100)
+    structuralBlocker: bool = False
+    blockerExplanation: str = ""
     verdict: Verdict
     verdictReason: str = ""
     summary: str = ""

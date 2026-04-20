@@ -30,31 +30,61 @@ def valid_brief() -> dict:
         "companyName": "Acme",
         "product": "Widget",
         "gtmScore": 72,
-        "verdict": "Go",
+        "structuralBlocker": False,
+        "blockerExplanation": "",
+        "verdict": "Conditional Go",
         "verdictReason": "Strong fit",
         "summary": "Go for it",
         "scoreBreakdown": [
-            {"dimension": "Market Opportunity", "score": 20, "max": 25, "note": "ok"},
             {
-                "dimension": "Competitive Landscape",
+                "dimension": "Market Size & Tailwind",
                 "score": 15,
                 "max": 20,
                 "note": "ok",
+                "blocker": False,
             },
             {
                 "dimension": "Regulatory Feasibility",
                 "score": 14,
                 "max": 20,
                 "note": "ok",
+                "blocker": False,
             },
-            {"dimension": "Product-Market Fit", "score": 15, "max": 20, "note": "ok"},
             {
-                "dimension": "GTM Execution Feasibility",
+                "dimension": "Competitive Intensity",
                 "score": 10,
                 "max": 15,
                 "note": "ok",
+                "blocker": False,
             },
-            {"dimension": "Macro & Timing", "score": 8, "max": 10, "note": "ok"},
+            {
+                "dimension": "Entry Barrier Realism",
+                "score": 10,
+                "max": 15,
+                "note": "ok",
+                "blocker": False,
+            },
+            {
+                "dimension": "Timing Alignment",
+                "score": 10,
+                "max": 15,
+                "note": "ok",
+                "blocker": False,
+            },
+            {
+                "dimension": "GTM Execution Clarity",
+                "score": 7,
+                "max": 10,
+                "note": "ok",
+                "blocker": False,
+            },
+            {
+                "dimension": "Company-Market Readiness",
+                "score": 3,
+                "max": 5,
+                "note": "ok",
+                "blocker": False,
+            },
         ],
         "marketOpportunity": {
             "headline": "Big market",
@@ -62,7 +92,6 @@ def valid_brief() -> dict:
             "keyStats": [
                 {"label": "TAM", "value": "$10B"},
                 {"label": "Users", "value": "100M"},
-                {"label": "Growth", "value": "20%"},
             ],
         },
         "marketSizing": {
@@ -89,13 +118,12 @@ def valid_brief() -> dict:
         },
         "marketAnalysis": {
             "overview": "good",
-            "trends": ["a", "b", "c", "d"],
-            "risks": ["x", "y", "z"],
+            "trends": ["a", "b", "c"],
+            "risks": ["x", "y"],
         },
         "opportunities": [
             {"title": "A", "desc": "a"},
             {"title": "B", "desc": "b"},
-            {"title": "C", "desc": "c"},
         ],
         "competitors": [
             {
@@ -124,27 +152,43 @@ def valid_brief() -> dict:
             },
         ],
         "regulatory": [
-            {"level": "critical", "agency": "MAS", "title": "T1", "desc": "d"},
-            {"level": "critical", "agency": "OJK", "title": "T2", "desc": "d"},
-            {"level": "medium", "agency": "X", "title": "T3", "desc": "d"},
-            {"level": "medium", "agency": "Y", "title": "T4", "desc": "d"},
-            {"level": "low", "agency": "Z", "title": "T5", "desc": "d"},
+            {
+                "level": "critical",
+                "agency": "MAS",
+                "title": "T1",
+                "desc": "d",
+                "blocker": False,
+            },
+            {
+                "level": "medium",
+                "agency": "OJK",
+                "title": "T2",
+                "desc": "d",
+                "blocker": False,
+            },
+            {
+                "level": "low",
+                "agency": "X",
+                "title": "T3",
+                "desc": "d",
+                "blocker": False,
+            },
         ],
         "gtmPlan": {
             "phase1": {
                 "timing": "Month 1-3",
                 "title": "P1",
-                "items": ["a", "b", "c", "d"],
+                "items": ["a", "b", "c"],
             },
             "phase2": {
                 "timing": "Month 4-9",
                 "title": "P2",
-                "items": ["a", "b", "c", "d"],
+                "items": ["a", "b", "c"],
             },
             "phase3": {
                 "timing": "Month 10-18",
                 "title": "P3",
-                "items": ["a", "b", "c", "d"],
+                "items": ["a", "b", "c"],
             },
         },
     }

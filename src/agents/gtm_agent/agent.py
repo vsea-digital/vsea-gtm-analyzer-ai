@@ -9,6 +9,7 @@ from src.agents.gtm_agent.prompts import (
     build_gtm_instruction,
 )
 from src.configs.config import get_config
+from src.models import get_claude_sonnet_4_6
 from src.schemas.gtm import GTMBrief
 
 
@@ -17,16 +18,14 @@ def _base_generate_config() -> types.GenerateContentConfig:
     return types.GenerateContentConfig(
         temperature=cfg.temperature,
         max_output_tokens=cfg.max_output_tokens,
-        thinking_config=types.ThinkingConfig(thinking_budget=cfg.thinking_budget),
     )
 
 
 def create_doc_agent(market: str, industry: str) -> LlmAgent:
     """Pitch-deck mode: no tools; structured JSON output enforced via output_schema."""
-    config = get_config()
     return LlmAgent(
         name="GTMDocAnalystAgent",
-        model=config.gemini.model_name,
+        model=get_claude_sonnet_4_6(),
         description=GTM_AGENT_DESCRIPTION,
         instruction=build_gtm_instruction(market, industry),
         generate_content_config=_base_generate_config(),
@@ -35,14 +34,13 @@ def create_doc_agent(market: str, industry: str) -> LlmAgent:
 
 
 def create_url_agent(market: str, industry: str) -> LlmAgent:
-    """URL mode: google_search grounding enabled. ADK/Gemini disallow
-    output_schema together with tools, so we rely on the prompt-embedded JSON
-    structure and parse the response.
+    """URL mode: google_search grounding enabled. ADK disallows output_schema
+    together with tools, so we rely on the prompt-embedded JSON structure and
+    parse the response.
     """
-    config = get_config()
     return LlmAgent(
         name="GTMUrlAnalystAgent",
-        model=config.gemini.model_name,
+        model=get_claude_sonnet_4_6(),
         description=GTM_AGENT_DESCRIPTION,
         instruction=build_gtm_instruction(market, industry),
         tools=[google_search],
