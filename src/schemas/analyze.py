@@ -13,3 +13,8 @@ class UrlAnalyzeRequest(BaseModel):
     url: HttpUrl
     market: str
     industry: str
+    company_description: str = ""
+    customers: str = ""
+    stage: str = ""
+    business_model: str = ""
+    gtm_goals: str = ""

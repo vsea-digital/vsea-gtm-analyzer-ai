@@ -22,7 +22,16 @@ async def analyze_url(
     _: str = Depends(verify_service_key),
 ) -> GTMBrief:
     url_str = str(request.url)
-    user_msg = build_url_user_message(url_str, request.market, request.industry)
+    user_msg = build_url_user_message(
+        url_str,
+        request.market,
+        request.industry,
+        company_description=request.company_description,
+        customers=request.customers,
+        stage=request.stage,
+        business_model=request.business_model,
+        gtm_goals=request.gtm_goals,
+    )
     parts = [types.Part.from_text(text=user_msg)]
 
     agent = create_research_agent(request.market, request.industry)

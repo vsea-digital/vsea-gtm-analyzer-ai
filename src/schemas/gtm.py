@@ -29,7 +29,7 @@ class MarketOpportunity(BaseModel):
 class MarketSizingBand(BaseModel):
     label: str = ""
     value: str = ""
-    pct: int = 0
+    pct: float = 0
     note: str = ""
 
 

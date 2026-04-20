@@ -57,11 +57,37 @@ def build_doc_user_message(market: str, industry: str, is_pdf: bool) -> str:
     )
 
 
-def build_url_user_message(url: str, market: str, industry: str) -> str:
+def build_url_user_message(
+    url: str,
+    market: str,
+    industry: str,
+    *,
+    company_description: str = "",
+    customers: str = "",
+    stage: str = "",
+    business_model: str = "",
+    gtm_goals: str = "",
+) -> str:
+    extras = [
+        ("What the company does", company_description),
+        ("Primary customers", customers),
+        ("Company stage / revenue", stage),
+        ("Primary business model", business_model),
+        ("GTM challenges or goals", gtm_goals),
+    ]
+    context_block = "\n".join(
+        f"- {label}: {value.strip()}" for label, value in extras if value and value.strip()
+    )
+    context_section = (
+        f"\n\nAdditional company context (use to calibrate your scoring):\n{context_block}"
+        if context_block
+        else ""
+    )
     return (
         f"Visit and analyse this company website: {url}\n\n"
         f"Generate the complete VentureSEA GTM brief as a JSON object for entering "
         f"{market} in the {industry} sector. Extract company name and product from "
         "the website. Apply the 7-dimension scoring rubric and structural blocker detection. "
         "Respond with ONLY the JSON object."
+        f"{context_section}"
     )
