@@ -95,8 +95,17 @@ async def _scrub_stream(stream: AsyncIterator[Any]) -> AsyncIterator[Any]:
         yield chunk
 
 
+# litellm retries with exponential backoff on 429 / 5xx / timeouts /
+# connection errors. 4xx client errors (bad key, grammar too large) are not
+# retried.
+_NUM_RETRIES = 3
+
+
 def get_claude_sonnet_4_6() -> LiteLlm:
-    return LiteLlm(model=f"anthropic/{CLAUDE_SONNET_4_6}")
+    return LiteLlm(
+        model=f"anthropic/{CLAUDE_SONNET_4_6}",
+        num_retries=_NUM_RETRIES,
+    )
 
 
 def get_claude_sonnet_4_6_with_web_search() -> LiteLlm:
@@ -104,4 +113,5 @@ def get_claude_sonnet_4_6_with_web_search() -> LiteLlm:
     return LiteLlm(
         model=f"anthropic/{CLAUDE_SONNET_4_6}",
         llm_client=_WebSearchLiteLLMClient(),
+        num_retries=_NUM_RETRIES,
     )
