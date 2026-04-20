@@ -20,15 +20,10 @@ class ScoreBreakdownItem(BaseModel):
     blocker: bool = False
 
 
-class KeyStat(BaseModel):
-    label: str = ""
-    value: str = ""
-
-
 class MarketOpportunity(BaseModel):
     headline: str = ""
     narrative: str = ""
-    keyStats: list[KeyStat] = Field(default_factory=list)
+    keyStats: list[str] = Field(default_factory=list)
 
 
 class MarketSizingBand(BaseModel):
