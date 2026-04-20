@@ -12,9 +12,6 @@ GTM_AGENT_DESCRIPTION = (
     "score at 45 when a blocker is found."
 )
 
-CLAUDE_MODEL = "claude-sonnet-4-6"
-CLAUDE_PROXY = "https://venturesea-claude-proxy.onrender.com/"
-
 BLOCKER_CEILING = 45
 
 
