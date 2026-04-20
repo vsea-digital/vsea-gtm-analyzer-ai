@@ -54,7 +54,7 @@ class _WebSearchLiteLLMClient(LiteLLMClient):
 
 
 def _is_server_tool_call(tc: Any) -> bool:
-    tc_id = (getattr(tc, "id", "") or "")
+    tc_id = getattr(tc, "id", "") or ""
     if tc_id.startswith(_SERVER_TOOL_ID_PREFIX):
         return True
     fn = getattr(tc, "function", None)

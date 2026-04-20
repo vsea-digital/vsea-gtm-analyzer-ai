@@ -81,7 +81,9 @@ def build_url_user_message(
         ("GTM challenges or goals", gtm_goals),
     ]
     context_block = "\n".join(
-        f"- {label}: {value.strip()}" for label, value in extras if value and value.strip()
+        f"- {label}: {value.strip()}"
+        for label, value in extras
+        if value and value.strip()
     )
     context_section = (
         f"\n\nAdditional company context (use to calibrate your scoring):\n{context_block}"
