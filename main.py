@@ -1,8 +1,11 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.configs.config import get_config
 from src.logging.custom_logger import Logging
+from src.models.models import CLAUDE_SONNET_4_6
 from src.routes import api_router
 
 LOGGER = Logging().get_logger("main")
@@ -20,9 +23,10 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=f"{config.project.name} API",
         description=(
-            "ADK-powered GTM analyzer agents for VentureSea. "
-            "Two endpoints: /analyze/document (pitch deck) and /analyze/url "
-            "(website with Google Search grounding)."
+            "ADK-powered GTM analyzer agents for VentureSea, driven by "
+            "Claude Sonnet 4.6 via LiteLlm. Two endpoints: /analyze/document "
+            "(pitch deck) and /analyze/url (website with Anthropic's native "
+            "web_search grounding)."
         ),
         version=config.project.version,
         docs_url="/docs",
@@ -54,10 +58,12 @@ def create_app() -> FastAPI:
     async def startup():
         LOGGER.info(
             f"Starting {config.project.name} v{config.project.version} "
-            f"(model={config.gemini.model_name})"
+            f"(model={CLAUDE_SONNET_4_6})"
         )
-        if not config.secrets.GOOGLE_API_KEY:
-            LOGGER.warning("GOOGLE_API_KEY is not set")
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            LOGGER.warning(
+                "ANTHROPIC_API_KEY is not set — /analyze endpoints will fail"
+            )
         if not config.secrets.SERVICE_API_KEY:
             LOGGER.warning(
                 "SERVICE_API_KEY is not set — /analyze endpoints will reject all requests"

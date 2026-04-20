@@ -31,8 +31,8 @@ def test_analyze_document_flow(monkeypatch, valid_brief):
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["companyName"] == "Acme"
-    assert body["verdict"] == "Go"
-    assert len(body["scoreBreakdown"]) == 6
+    assert body["verdict"] == "Conditional Go"
+    assert len(body["scoreBreakdown"]) == 7
 
 
 def test_analyze_document_rejects_unsupported_type(monkeypatch):

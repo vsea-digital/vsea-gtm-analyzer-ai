@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from src.configs.config import get_config
+from src.models.models import CLAUDE_SONNET_4_6
 
 router = APIRouter(tags=["health"])
 
@@ -12,5 +13,5 @@ async def health_check():
         "status": "ok",
         "service": config.project.name,
         "version": config.project.version,
-        "model": config.gemini.model_name,
+        "model": CLAUDE_SONNET_4_6,
     }

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from google.adk.agents import LlmAgent
-from google.adk.tools import google_search
 from google.genai import types
 
 from src.agents.gtm_agent.prompts import (
@@ -9,7 +8,10 @@ from src.agents.gtm_agent.prompts import (
     build_gtm_instruction,
 )
 from src.configs.config import get_config
-from src.schemas.gtm import GTMBrief
+from src.models import (
+    get_claude_sonnet_4_6,
+    get_claude_sonnet_4_6_with_web_search,
+)
 
 
 def _base_generate_config() -> types.GenerateContentConfig:
@@ -17,34 +19,33 @@ def _base_generate_config() -> types.GenerateContentConfig:
     return types.GenerateContentConfig(
         temperature=cfg.temperature,
         max_output_tokens=cfg.max_output_tokens,
-        thinking_config=types.ThinkingConfig(thinking_budget=cfg.thinking_budget),
     )
 
 
 def create_doc_agent(market: str, industry: str) -> LlmAgent:
-    """Pitch-deck mode: no tools; structured JSON output enforced via output_schema."""
-    config = get_config()
+    """Pitch-deck mode: no tools. We used to pin Gemini output via
+    output_schema=GTMBrief, but Anthropic rejects the compiled strict grammar
+    for a schema this size, so we rely on the prompt's JSON contract and let
+    the route do parse_gtm_json + GTMBrief.model_validate instead."""
     return LlmAgent(
         name="GTMDocAnalystAgent",
-        model=config.gemini.model_name,
+        model=get_claude_sonnet_4_6(),
         description=GTM_AGENT_DESCRIPTION,
         instruction=build_gtm_instruction(market, industry),
         generate_content_config=_base_generate_config(),
-        output_schema=GTMBrief,
     )
 
 
 def create_url_agent(market: str, industry: str) -> LlmAgent:
-    """URL mode: google_search grounding enabled. ADK/Gemini disallow
-    output_schema together with tools, so we rely on the prompt-embedded JSON
-    structure and parse the response.
+    """URL mode: Anthropic's native web_search server tool is enabled at the
+    LiteLlm client layer so Claude can browse the target company website.
+    We skip output_schema so the tool-call/response flow stays clean, and
+    rely on the prompt-embedded JSON structure + parse_gtm_json downstream.
     """
-    config = get_config()
     return LlmAgent(
         name="GTMUrlAnalystAgent",
-        model=config.gemini.model_name,
+        model=get_claude_sonnet_4_6_with_web_search(),
         description=GTM_AGENT_DESCRIPTION,
         instruction=build_gtm_instruction(market, industry),
-        tools=[google_search],
         generate_content_config=_base_generate_config(),
     )
