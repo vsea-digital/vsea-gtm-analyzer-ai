@@ -89,7 +89,10 @@ def valid_brief() -> dict:
         "marketOpportunity": {
             "headline": "Big market",
             "narrative": "Growing fast",
-            "keyStats": ["TAM $10B", "Users 100M"],
+            "keyStats": [
+                {"label": "TAM", "value": "$10B"},
+                {"label": "Users", "value": "100M"},
+            ],
         },
         "marketSizing": {
             "tam": {

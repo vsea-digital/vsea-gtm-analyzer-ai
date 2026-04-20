@@ -4,6 +4,10 @@ from pydantic import BaseModel, Field
 
 
 Verdict = Literal["Strong Go", "Conditional Go", "Proceed with Caution", "No Go"]
+# Frontend CSS keys off these exact strings (threat-High / reg-critical / …)
+# so we pin them as enums rather than free-form strings.
+Threat = Literal["High", "Medium", "Low"]
+RegLevel = Literal["critical", "medium", "low"]
 
 
 # Fields that are "flavor text" (notes, descriptions, weaknesses) default to ""
@@ -20,10 +24,15 @@ class ScoreBreakdownItem(BaseModel):
     blocker: bool = False
 
 
+class KeyStat(BaseModel):
+    label: str = ""
+    value: str = ""
+
+
 class MarketOpportunity(BaseModel):
     headline: str = ""
     narrative: str = ""
-    keyStats: list[str] = Field(default_factory=list)
+    keyStats: list[KeyStat] = Field(default_factory=list)
 
 
 class MarketSizingBand(BaseModel):
@@ -57,12 +66,12 @@ class Competitor(BaseModel):
     name: str
     hq: str = ""
     desc: str = ""
-    threat: str = ""
+    threat: Threat
     weakness: str = ""
 
 
 class RegulatoryItem(BaseModel):
-    level: str = ""
+    level: RegLevel
     agency: str = ""
     title: str = ""
     desc: str = ""
