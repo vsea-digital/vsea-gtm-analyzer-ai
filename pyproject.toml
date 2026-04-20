@@ -1,6 +1,6 @@
 [project]
 name = "vsea-gtm-analyzer-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "ADK-powered GTM analyzer agents for VentureSea (pitch-deck and URL-grounded modes)"
 requires-python = ">=3.12"
 dependencies = [
